@@ -1,0 +1,178 @@
+version: "3.5"
+services:
+#  elasticsearch:
+#    container_name: temporal-elasticsearch
+#    environment:
+#      - cluster.routing.allocation.disk.threshold_enabled=true
+#      - cluster.routing.allocation.disk.watermark.low=512mb
+#      - cluster.routing.allocation.disk.watermark.high=256mb
+#      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
+#      - discovery.type=single-node
+#      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+#      - xpack.security.enabled=false
+#    image: elasticsearch:${ELASTICSEARCH_VERSION}
+#    networks:
+#      - temporal-network
+#    expose:
+#      - 9200
+#    volumes:
+#      - /var/lib/elasticsearch/data
+#  postgresql:
+#    container_name: temporal-postgresql
+#    environment:
+#      POSTGRES_PASSWORD: temporal
+#      POSTGRES_USER: temporal
+#    image: postgres:${POSTGRESQL_VERSION}
+#    networks:
+#      - temporal-network
+#    expose:
+#      - 5432
+#    volumes:
+#      - /var/lib/postgresql/data
+#  temporal:
+#    container_name: temporal
+#    depends_on:
+#      - postgresql
+#      - elasticsearch
+#    environment:
+#      - DB=postgres12
+#      - DB_PORT=5432
+#      - POSTGRES_USER=temporal
+#      - POSTGRES_PWD=temporal
+#      - POSTGRES_SEEDS=postgresql
+#      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+#      - ENABLE_ES=true
+#      - ES_SEEDS=elasticsearch
+#      - ES_VERSION=v7
+#    image: temporalio/auto-setup:${TEMPORAL_VERSION}
+#    networks:
+#      - temporal-network
+#    ports:
+#      - 7233:7233
+#    volumes:
+#      - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+#  temporal-admin-tools:
+#    container_name: temporal-admin-tools
+#    depends_on:
+#      - temporal
+#    environment:
+#      - TEMPORAL_ADDRESS=temporal:7233
+#      - TEMPORAL_CLI_ADDRESS=temporal:7233
+#    image: temporalio/admin-tools:${TEMPORAL_ADMINTOOLS_VERSION}
+#    networks:
+#      - temporal-network
+#    stdin_open: true
+#    tty: true
+#  temporal-ui:
+#    container_name: temporal-ui
+#    depends_on:
+#      - temporal
+#    environment:
+#      - TEMPORAL_ADDRESS=temporal:7233
+#      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+#    image: temporalio/ui:${TEMPORAL_UI_VERSION}
+#    networks:
+#      - temporal-network
+#    ports:
+#      - 8080:8080
+
+  redis:
+    image: 'redis'
+    networks:
+      - temporal-network
+    ports:
+      - "6379:6379"
+  account-service:
+    build: .
+    networks:
+      - temporal-network
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+  authentication-service:
+    build: ../authentication-service/.
+    networks:
+      - temporal-network
+    ports:
+      - "8082:8082"
+    depends_on:
+      - redis
+  customer-service:
+    build: ../customer-service/.
+    networks:
+      - temporal-network
+    ports:
+      - "8083:8083"
+    depends_on:
+      - redis
+  operation-service:
+    build: ../operation-service/.
+    networks:
+      - temporal-network
+    ports:
+      - "8084:8084"
+    depends_on:
+      - redis
+  prod-loan-deposit-service:
+    build: ../prod-loan-deposit-service/.
+    networks:
+      - temporal-network
+    ports:
+      - "8085:8085"
+    depends_on:
+      - redis
+  product-card-service:
+    build: ../product-card-service/.
+    networks:
+      - temporal-network
+    ports:
+      - "8086:8086"
+    depends_on:
+      - redis
+      - card-management-orchestrator
+  product-consumer-service:
+    build: ../product-consumer-service/.
+    networks:
+      - temporal-network
+    ports:
+      - "8087:8087"
+    depends_on:
+      - redis
+  product-payment-service:
+    build: ../product-payment-service/.
+    networks:
+      - temporal-network
+    ports:
+      - "8088:8088"
+    depends_on:
+      - redis
+  card-management-orchestrator:
+    build: ../../card-management/orchestrator/.
+    networks:
+      - temporal-network
+    ports:
+      - "9090:9090"
+#  card-management-validator:
+#    build: ../../card-management/atomic-service/atomic-validator/.
+#    networks:
+#      - temporal-network
+#    ports:
+#      - "9091:9091"
+#  card-management-service:
+#    build: ../../card-management/atomic-service/atomic-services/.
+#    networks:
+#      - temporal-network
+#    ports:
+#      - "9092:9092"
+#  activemq:
+#    image: rmohr/activemq:5.10.0
+#    volumes:
+#      - "./activemq/activemq.xml:/conf/activemq.xml"
+#    ports:
+#      - "61616:61616" # broker (admin:adminactivemq)(amq:amq)
+#      - "8161:8161"   # web    http://boot2docker:8161/admin (admin:admin)
+networks:
+  temporal-network:
+    driver: bridge
+    name: temporal-network
